@@ -1,13 +1,14 @@
 const net = require("net");
-
-//?这是在构造什么，一个类吗
+const parser = require("./parser.js");
+//?这是在构造一个request类
 class Request {
     constructor(options) {
         this.method = options.method || "GET";
         this.host = options.host;
         this.port = options.port || 80;
         this.path = options.path || "/";
-        this.body = options.headers || {};
+        this.body = options.body || {};
+        this.headers = options.headers || {};
         //一定要有content type
         if (!this.headers["Content-Type"]) {
             this.headers["Content-Type"] = "application/x-www-form-urlencoded";
@@ -16,14 +17,15 @@ class Request {
             this.bodyText = JSON.stringify(this.body);
         else if (this.headers["Content-Type"] === "application/x-www-form-urlencoded")
             this.bodyText = Object.keys(this.body).map(key => `${key}=${encodeURIComponent(this.body[key])}`).join('&');
+
         this.headers["Content-Length"] = this.bodyText.length;
     }
     //根据request格式
     toString() {
-        return `${this.method} ${this.path} HTTP/1.1 \r
-        ${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
-        \r
-        ${this.bodyText}`
+        return `${this.method} ${this.path} HTTP/1.1\r
+${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
+\r
+${this.bodyText}`
     }
     //在一个建立好的tcp连接上把请求发送出去
     //若没有则根据host和port创建tcp连接
@@ -44,11 +46,13 @@ class Request {
                 })
             }
             connection.on('data', (data) => {
+                console.log(data.toString());
                 parser.receive(data.toString());
                 if (parser.isFinished) {
                     resolve(parser.response);
+                    connection.end();
                 }
-                connection.end();
+
             });
             connection.on('error', (err) => {
                 reject(err);
@@ -75,6 +79,20 @@ class ResponseParser {
         this.headerName = "";
         this.headerValue = "";
         this.bodyParser = null;
+    }
+    get isFinished() {
+        return this.bodyParser && this.bodyParser.isFinished;
+    }
+    //组装response 
+    get response() {
+        this.statusLine.match(/HTTP\/1.1 ([0-9]+) ([\s\S]+)/);
+        return {
+            // 从statusline里匹配
+            statusCode: RegExp.$1,
+            statusText: RegExp.$2,
+            headers: this.headers,
+            body: this.bodyParser.content.join('')
+        }
     }
     receive(string) {
         for (let i = 0; i < string.length; i++) {
@@ -151,6 +169,7 @@ class TrunkedBodyParser {
                 this.current = this.WAITING_LENGTH_LINE_END;
             } else {
                 //把之前的十六进制数进一位，再加上当前的数
+                //把十六进制转化为十进制
                 this.length *= 16;
                 this.length += parseInt(char, 16);
             }
@@ -191,5 +210,6 @@ void async function () {
         }
     });
     let response = await request.send();
-    console.log(response);
+    console.log(response.body);
+    let dom = parser.parserHTML(response.body);
 }();
