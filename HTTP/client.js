@@ -49,6 +49,7 @@ ${this.bodyText}`
                 console.log(data.toString());
                 parser.receive(data.toString());
                 if (parser.isFinished) {
+                    //怎样resolve
                     resolve(parser.response);
                     connection.end();
                 }
@@ -95,6 +96,13 @@ class ResponseParser {
         }
     }
     receive(string) {
+        // "HTTP/1.1 200 OK\r\n
+        //Content-Type: text/plain\r\nX-Foo: bar\r\n
+        //Date: Mon, 12 Jul 2021 12:01:03 GMT\r\n
+        //Connection: keep-alive\r\n
+        //Transfer-Encoding: chunked\r\n\r\n109\r\n
+        //<html maaa=a >\n<head>\n    <style>\nbody div #myid{\n    width:100px;\n    background-color: #ff5000;\n}\nbody div img{\n    width:30px;\n    background-color: #ff1111;\n}\n    <style>\n</head>\n<body>\n    <div>\n        <img id=\"myid\"/>\n        <img />\n    <div>\n<body>\n</html>\r\n0\r\n\r\n"
+        console.log(string);
         for (let i = 0; i < string.length; i++) {
             //这是状态方程
             this.receiveChar(string.charAt(i));
@@ -123,7 +131,7 @@ class ResponseParser {
                 this.headerName += char;
             }
         } else if (this.current === this.WAITING_HEADER_SPACE) {
-            if (char === '') {
+            if (char === ' ') {
                 this.current = this.WAITING_HEADER_VALUE;
             }
         } else if (this.current === this.WAITING_HEADER_VALUE) {
@@ -161,7 +169,7 @@ class TrunkedBodyParser {
         this.current = this.WAITING_LENGTH;
     }
     receiveChar(char) {
-        if (this.current = this.WAITING_LENGTH) {
+        if (this.current === this.WAITING_LENGTH) {
             if (char === '\r') {
                 if (this.length === 0) {
                     this.isFinished = true;
@@ -173,7 +181,7 @@ class TrunkedBodyParser {
                 this.length *= 16;
                 this.length += parseInt(char, 16);
             }
-        } else if (this.current === this.WAITING_NEW_LINE_END) {
+        } else if (this.current === this.WAITING_LENGTH_LINE_END) {
             if (char === '\n') {
                 this.current = this.READING_TRUNK;
             }
@@ -211,5 +219,6 @@ void async function () {
     });
     let response = await request.send();
     console.log(response.body);
-    let dom = parser.parserHTML(response.body);
+    console.log(response.headers);
+    // let dom = parser.parserHTML(response.body);
 }();
