@@ -4,9 +4,57 @@ let currentToken = null;
 let currentAttribute = null;
 //处理属性之前处理标签的状态不够用，要添加新的状态,再把属性放到start tag上
 
+let stack = [{ type: "document", children: [] }];
+//文本节点用textnode来处理
+let currentTextNode = null;
+
 //创建的所有token都要在同一个出口输出
 function emit(token) {
-    console.log(token); //之后再处理
+    let top = stack[stack.length - 1];
+
+    if (token.type === "startTag") {
+        let element = {
+            type: "element",
+            children: [],
+            attribute: []
+        }
+        element.tagName = token.tagName;
+        for (p in token) {
+            if (p !== "type" && p !== "tagName")
+                element.attribute.push({
+                    name: p,
+                    value: token[p]
+                });
+        }
+        top.children.push(element);
+        element.parent = top;
+
+        if (!token.isSelfClosing)
+            stack.push(element);
+
+        currentTextNode = null; //无论是开始标签还是自封闭标签之后都要把文本节点清空
+
+    } else if (token.type === "endTag") {
+        if (top.tagName !== token.tagName) {
+            console.log(top.tagName);
+            console.log(token.tagName);
+            throw new Error("Tag start end doesn't match");
+        } else {
+            stack.pop();
+        }
+        currentTextNode = null; //结束标签之后也把文本节点清空
+        //文本节点的逻辑
+    } else if (token.type === "text") {
+        if (currentTextNode == null) {
+            currentTextNode = {
+                type: "text",
+                content: ""
+            }
+            top.children.push(currentTextNode);
+        }
+        currentTextNode.content += token.content;//当前的文本节点追加content
+        //top.children 里的textNode 会自己update吗?
+    }
 }
 
 const EOF = Symbol('EOF'); //EOF: End Of File
@@ -255,6 +303,7 @@ module.exports.parseHTML = function parseHTML(html) {
         state = state(c);
     }
     state = state(EOF);
+    return stack[0];
 }
 
 // function parseHTML(html) {
@@ -264,9 +313,11 @@ module.exports.parseHTML = function parseHTML(html) {
 //         state = state(c);
 //     }
 //     state = state(EOF);
+//     return stack[0];
 // }
 
-// parseHTML(`<html maaa=a >
+// parseHTML(
+//     `<html maaa=a >
 // <head>
 //     <style>
 // body div #myid{
@@ -277,36 +328,13 @@ module.exports.parseHTML = function parseHTML(html) {
 //     width:30px;
 //     background-color: #ff1111;
 // }
-//     <style>
+//     </style>
 // </head>
 // <body>
 //     <div>
 //         <img id="myid"/>
 //         <img />
-//     <div>
-// <body>
-// </html>
-// 0
-
-
-// <html maaa=a >
-// <head>
-//     <style>
-// body div #myid{
-//     width:100px;
-//     background-color: #ff5000;
-// }
-// body div img{
-//     width:30px;
-//     background-color: #ff1111;
-// }
-//     <style>
-// </head>
-// <body>
-//     <div>
-//         <img id="myid"/>
-//         <img />
-//     <div>
-// <body>
+//     </div>
+// </body>
 // </html>`)
 

@@ -218,7 +218,8 @@ void async function () {
         }
     });
     let response = await request.send();
-    console.log(response.body);
+    // console.log(response.body);
     // console.log(response.headers);
     let dom = parser.parseHTML(response.body);
+    console.log(dom);
 }();
