@@ -46,7 +46,7 @@ ${this.bodyText}`
                 })
             }
             connection.on('data', (data) => {
-                console.log(data.toString());
+                // console.log(data.toString());
                 parser.receive(data.toString());
                 if (parser.isFinished) {
                     //怎样resolve
@@ -102,7 +102,7 @@ class ResponseParser {
         //Connection: keep-alive\r\n
         //Transfer-Encoding: chunked\r\n\r\n109\r\n
         //<html maaa=a >\n<head>\n    <style>\nbody div #myid{\n    width:100px;\n    background-color: #ff5000;\n}\nbody div img{\n    width:30px;\n    background-color: #ff1111;\n}\n    <style>\n</head>\n<body>\n    <div>\n        <img id=\"myid\"/>\n        <img />\n    <div>\n<body>\n</html>\r\n0\r\n\r\n"
-        console.log(string);
+        // console.log(string);
         for (let i = 0; i < string.length; i++) {
             //这是状态方程
             this.receiveChar(string.charAt(i));
@@ -221,5 +221,8 @@ void async function () {
     // console.log(response.body);
     // console.log(response.headers);
     let dom = parser.parseHTML(response.body);
+    // console.log(JSON.stringify(dom, null, "    "));
+    console.log("hello");
     console.log(dom);
+    console.log("");
 }();
